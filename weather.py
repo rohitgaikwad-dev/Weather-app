@@ -15,16 +15,39 @@ root.geometry("890x470+300+200")
 root.configure(bg="#57adff")
 root.resizable(False, False)
 
+
 def getWeather():
     city = textfield.get()
 
-    geolocator=Nominatim(user_agent="geoapiExercises")
-    location=geolocator.geocode(city)
+    geolocator = Nominatim(user_agent="geoapiExercises")
+    location = geolocator.geocode(city)
     obj = TimezoneFinder()
 
-    result = obj.timezone_at(lng=location.longitude,lat=location.latitude)
+    result = obj.timezone_at(lng=location.longitude, lat=location.latitude)
 
     timezone.config(text=result)
+    long_lat.config(
+        text=f"{round(location.latitude,4)}°N,{round(location.longitude,4)}°E")
+
+    home = pytz.timezone(result)
+    local_time = datetime.now(home)
+    current_time = local_time.strftime("%I:%M %p")
+    clock.config(text=current_time)
+
+    # weather
+    api = "https://api.openweathermap.org/data/2.5/onecall?lat="+str(location.latitude)+"&lon="+str(
+        location.longitude)+"&units=metric&exclude=hourly&appid=79cdc75ae144e45f7753e0213057c503"
+    json_data = requests.get(api).json()
+
+    # current
+    # temp = json_data['list']['main']['temp']
+    # humidity= json_data['main']['humidity']
+    # print(temp)
+    json_data = requests.get(api).json()
+    print(json_data)
+
+
+
 
 # icon
 image_icon = PhotoImage(file="./Assets/images/logo.png")
@@ -70,7 +93,7 @@ textfield.focus()
 
 Search_icon = PhotoImage(file="./Assets/images/Layer 6.png")
 myimage_icon = Button(image=Search_icon, borderwidth=0,
-                      cursor="hand2", bg="#203243",command=getWeather)
+                      cursor="hand2", bg="#203243", command=getWeather)
 myimage_icon.place(x=645, y=125)
 
 
@@ -98,7 +121,7 @@ clock.place(x=30, y=20)
 timezone = Label(root, font=("Poppins", 20), fg="white", bg="#57adff")
 timezone.place(x=700, y=20)
 
-long_lat = Label(root, font=("Poppins", 15), fg="white", bg="#57adff")
-long_lat.place(x=700, y=20)
+long_lat = Label(root, font=("Poppins", 10), fg="white", bg="#57adff")
+long_lat.place(x=720, y=60)
 
 root.mainloop()
