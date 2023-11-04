@@ -1,26 +1,23 @@
-import datetime
-
 import requests
 from django.shortcuts import render
 
 # Create your views here.
 
-
 def index(request):
-    API_KEY = open("API_KEY", "r").read()
-    current_weather_url = "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}"
-    forecast_url = "https://api.openweathermap.org/data/2.5/onecall?Lat={}&Lon={}&exclude=current,minutely,hourly,alerts&appid={}"
+    WEATHERBIT_API_KEY = open("API_KEY", "r").read()
+    current_weather_url = "https://api.weatherbit.io/v2.0/current"
+    forecast_url = "https://api.weatherbit.io/v2.0/forecast/daily"
 
     if request.method == "POST":
         city1 = request.POST['city1']
-        city2 = request.get['city2', None]
+        city2 = request.POST.get('city2', None)
 
         weather_data1, daily_forecasts1 = fetch_weather_and_forecast(
-            city1, API_KEY, current_weather_url, forecast_url)
+            city1, WEATHERBIT_API_KEY, current_weather_url, forecast_url)
 
         if city2:
             weather_data2, daily_forecasts2 = fetch_weather_and_forecast(
-                city2, API_KEY, current_weather_url, forecast_url)
+                city2, WEATHERBIT_API_KEY, current_weather_url, forecast_url)
         else:
             weather_data2, daily_forecasts2 = None, None
 
@@ -30,33 +27,45 @@ def index(request):
             "weather_data2": weather_data2,
             "daily_forecasts2": daily_forecasts2
         }
-        
+
         return render(request, "weather_app/index.html", context)
     else:
         return render(request, 'weather_app/index.html')
 
-
 def fetch_weather_and_forecast(city, api_key, current_weather_url, forecast_url):
-    response = requests.get(current_weather_url.forecast(city, api_key)).json()
-    lat, lon = response['coord']['lat'], response['coord']['lon']
-    forecast_response = requests.get(
-        forecast_url.format(lat, lon, api_key)).json()
+    current_weather_params = {
+        "city": city,
+        "key": api_key
+    }
+    
+    forecast_params = {
+        "city": city,
+        "key": api_key,
+        "days": 5  # Number of days for the forecast (5-day forecast)
+    }
+
+    response = requests.get(current_weather_url, params=current_weather_params).json()
+    
+    if 'error' in response:
+        return None, None  # Handle error response from Weatherbit here
+
+    forecast_response = requests.get(forecast_url, params=forecast_params).json()
 
     weather_data = {
         "city": city,
-        "tempature": round(response['main']['temp'] - 273.15, 2),
-        "description": response['weather'][0]['description'],
-        "icon": response['weather'][0]['icon']
+        "temperature": response['data'][0]['temp'],
+        "description": response['data'][0]['weather']['description'],
+        "icon": response['data'][0]['weather']['icon']
     }
 
     daily_forecasts = []
-    for daily_data in forecast_response['daily'][:5]:
+    for daily_data in forecast_response['data']:
         daily_forecasts.append({
-            "day": datetime.datetime.fromtimestamp(daily_data['dt']).strftime("%A"),
-            "min_temp": round(daily_data['temp']['min']-273.15, 2),
-            "max_temp": round(daily_data['temp']['max']-273.15, 2),
-            "description": daily_data['weather'][0]['description'],
-            "icon": daily_data['weather'][0]['icon']
+            "day": daily_data['datetime'],
+            "min_temp": daily_data['min_temp'],
+            "max_temp": daily_data['max_temp'],
+            "description": daily_data['weather']['description'],
+            "icon": daily_data['weather']['icon']
         })
 
     return weather_data, daily_forecasts
